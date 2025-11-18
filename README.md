@@ -1,6 +1,8 @@
 # 2025 Quantum Informaton Hackathon
 
 ## Repository structure
+
+```text
 quantum2025/
 ├─ codes/
 │  ├─ newbies_1/   # Grover + 3-SAT + hill-climbing configuration recovery
