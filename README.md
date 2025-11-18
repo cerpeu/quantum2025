@@ -14,7 +14,7 @@ quantum2025/
 ├─ fermion.py                 # Fermionic / many-body utilities (planned)
 └─ README.md
 
-
+```
 
 
 ## Notebook overview
