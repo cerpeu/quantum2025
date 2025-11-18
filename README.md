@@ -14,6 +14,7 @@ quantum2025/
 
 
 
+
 ## Notebook overview
 ### 1. newbies_1 – Grover + 3-SAT + hill-climbing configuration recovery
 #### Concept
