@@ -24,8 +24,9 @@ A small 3-variable SAT instance is solved with Grover’s algorithm, and the QPU
 
 ##### 1.1 3-SAT instance
 The SAT formula is defined as a list of clauses:
-- Each clause is a tuple of integers.
-- Positive i means x_{i-1}, negative -i means ¬x_{i-1}.
+```
+# Each clause is a tuple of integers.
+# Positive i means x_{i-1}, negative -i means ¬x_{i-1}.
 clauses = [
     ( 1,  2,  3),   #  x0 ∨  x1 ∨  x2
     (-1,  2,  3),   # ¬x0 ∨  x1 ∨  x2
@@ -33,6 +34,7 @@ clauses = [
     ( 1,  2, -3),   #  x0 ∨  x1 ∨ ¬x2
     (-1, -2, -3),   # ¬x0 ∨ ¬x1 ∨ ¬x2  ← excludes only 111
 ]
+```
 - An is_satisfied(bitstr: str) -> bool function checks whether a 3-bit string satisfies all clauses.
 - Exhaustive search over 000–111 builds all_sols, the list of satisfying bitstrings. These are the states that the Grover oracle should mark with a phase flip.
 
@@ -43,7 +45,7 @@ clauses = [
     2. Implement a multi-controlled Z using H–MCX–H on the last qubit.
     3. Undo the earlier X gates.
   - Repeating this for each solution builds a multi-solution Grover oracle.
-  - 
+    
 - apply_diffusion(qc):
   - Standard Grover diffusion operator:
     1. Apply H to all qubits
@@ -86,12 +88,14 @@ A 3×3 origin–destination (OD) demand matrix is embedded as amplitudes on a 2n
 The circuit is sampled once on a QPU, and then a DynamicConfigRecovery class plus adaptive reweighting is used to refine a set of “valid” OD pairs using purely classical resampling.
 
 ##### 2.1 DynamicConfigRecovery
+```
 class DynamicConfigRecovery:
     def __init__(self, n, prob_threshold, max_distance):
         self.n = n
         self.prob_threshold = prob_threshold
         self.max_distance = max_distance
         self.valid_pairs = set()
+```
 - n is the number of bits used to encode one index (i or j), so the register has 2n qubits in total.
 - valid_pairs stores OD pairs (i, j) that are currently considered “valid”.
 The main method is:
@@ -106,6 +110,7 @@ def repair_and_update(self, raw_counts):
 - Step 2 implements a simple “repair” step: invalid OD pairs are mapped to their closest currently-valid pair if they are within a bounded manhattan distance.
 
 ##### 2.2 Amplitude embedding for OD distribution
+```
 def build_od_embedding_circuit(n, distribution):
     qr = QuantumRegister(2*n, 'q')
     cr = ClassicalRegister(2*n, 'c')
@@ -121,6 +126,7 @@ def build_od_embedding_circuit(n, distribution):
     qc.initialize(amps, qr)
     qc.measure(qr, cr)
     return qc
+```
 - distribution is a classical probability distribution over (i, j).
 - The circuit prepares a pure state whose amplitude squared gives this distribution.
   
@@ -136,6 +142,7 @@ def build_od_embedding_circuit(n, distribution):
 ##### 2.4 Main loop: QPU once + adaptive refinement
 In main():
   1. Define a 3×3 OD demand:
+```
 raw_demand = {
     (0,0):5,(0,1):3,(0,2):2,
     (1,0):1,(1,1):4,(1,2):5,
@@ -143,12 +150,13 @@ raw_demand = {
 }
 total = sum(raw_demand.values())
 od_dist = {p: d/total for p, d in raw_demand.items()}
-  2. Set parameters:
+```
+  3. Set parameters:
     - n = (3-1).bit_length() # 2 bits for indices 0–2
     - prob_threshold, max_distance, and shots
-  3. Use build_od_embedding_circuit and sample_qpu_once with backend "ibm_aachen" to obtain raw_counts from a single QPU run.
-  4. Initialize DynamicConfigRecovery(n, prob_threshold, max_distance).
-  5. For a fixed number of iterations (e.g. 5):
+  4. Use build_od_embedding_circuit and sample_qpu_once with backend "ibm_aachen" to obtain raw_counts from a single QPU run.
+  5. Initialize DynamicConfigRecovery(n, prob_threshold, max_distance).
+  6. For a fixed number of iterations (e.g. 5):
     - Run valid_pairs, probs = dcr.repair_and_update(current_counts)
     - If probs is empty, break.
     - Apply a biasing step:
@@ -156,7 +164,7 @@ od_dist = {p: d/total for p, d in raw_demand.items()}
       - Compute p^gamma for each pair to sharpen the distribution
       - Renormalize the probabilities
     - Draw new current_counts via sample_local(current_dist, shots, n) from this biased distribution.
-  6. At the end, print the final dcr.valid_pairs, the set of OD pairs that survived the iterative refinement.
+  7. At the end, print the final dcr.valid_pairs, the set of OD pairs that survived the iterative refinement.
      
 Takeaway: This notebook shows a “QPU once + classical iterative refinement” pattern, where an initial quantum sampling is refined purely classically via dynamic configuration recovery and adaptive resampling.
 
@@ -166,6 +174,7 @@ A 3-qubit bit-flip repetition code is used to encode a logical state.
 Noisy samples from ibm_aachen are then projected onto the code subspace by mapping each observed bitstring to the nearest codeword in Hamming distance (000 or 111).
 
 ##### 3.1 BitFlipConfigRecovery
+```
 class BitFlipConfigRecovery:
     def __init__(self, valid_codewords):
         """
@@ -187,10 +196,12 @@ class BitFlipConfigRecovery:
             )
             recovered[best] += cnt
         return recovered
+```
 - self.freq keeps track of the full raw distribution over all observed bitstrings.
 - recovered records the distribution after projection onto the code space.
 
 ##### 3.2 3-qubit bit-flip code circuit
+```
 def encode_bit_flip_code():
     qr = QuantumRegister(3, 'q')
     cr = ClassicalRegister(3, 'c')
@@ -204,6 +215,7 @@ def encode_bit_flip_code():
     # Measure all
     qc.measure(qr, cr)
     return qc
+```
 - The logical information is effectively mirrored on three physical qubits (|0⟩ becomes |000⟩, |1⟩ becomes |111⟩ in the Z basis).
 - The code in this notebook prepares a superposition via H on the first qubit and encodes it into the repetition code.
  
@@ -226,6 +238,7 @@ A minimal U(1) lattice gauge toy model is built on four “link” qubits formin
 A 4-body plaquette interaction is implemented via a sequence of gates.
 Noisy measurement outcomes (with additional artificial measurement noise) are then projected onto the gauge-invariant subspace defined by even-parity bitstrings.
 ##### 4.1 GaugeConfigRecovery
+```
 class GaugeConfigRecovery:
     def __init__(self, valid_configs):
         """
@@ -247,9 +260,11 @@ class GaugeConfigRecovery:
             )
             recovered[best] += cnt
         return recovered
+```
 - This is structurally similar to the bit-flip code recovery, but now the set of valid configurations is “all 4-bit strings with even parity”.
  
 ##### 4.2 U(1) 2×2 plaquette circuit
+```
 def build_u1_plaquette():
     qr = QuantumRegister(4, 'link')
     cr = ClassicalRegister(4, 'c')
@@ -274,9 +289,11 @@ def build_u1_plaquette():
 
     qc.measure(qr, cr)
     return qc
+```
 - The 4-body phase is implemented via standard tricks (Hadamards plus a chain of CNOTs and a single-qubit RZ).
 
 ##### 4.3 Measurement noise
+```
 def add_measurement_noise(raw_counts, flip_prob=0.1):
     noisy = Counter()
     for bits, cnt in raw_counts.items():
@@ -288,9 +305,11 @@ def add_measurement_noise(raw_counts, flip_prob=0.1):
             )
             noisy[b] += 1
     return noisy
+```
 - Each bit of each shot is independently flipped with probability flip_prob, simulating classical measurement noise.
   
 ##### 4.4 Gauge-invariant configurations
+```
 def generate_valid_configs():
     valid = []
     for i in range(16):
@@ -298,6 +317,7 @@ def generate_valid_configs():
         if bits.count('1') % 2 == 0:
             valid.append(bits)
     return valid
+```
 - The gauge-invariant subspace is chosen as “4-bit states with even parity” (a minimal toy implementation of a Gauss-law constraint).
   
 ##### 4.5 Main flow
@@ -311,5 +331,3 @@ def generate_valid_configs():
   - recovered (after projection onto gauge-invariant space)
 
 Takeaway: This notebook provides a small example of lattice gauge theory + configuration recovery, projecting noisy measurements back into a gauge-invariant (even-parity) subspace.
-::contentReference[oaicite:0]{index=0}
-
