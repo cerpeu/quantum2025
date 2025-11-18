@@ -22,7 +22,7 @@ quantum2025/
 #### Concept
 A small 3-variable SAT instance is solved with Grover’s algorithm, and the QPU’s noisy shot distribution is post-processed using a simple hill-climbing configuration recovery to extract multiple satisfying assignments.
 
-##### 1.1 3-SAT instance
+#### 1.1 3-SAT instance
 The SAT formula is defined as a list of clauses:
 ```
 # Each clause is a tuple of integers.
@@ -38,7 +38,7 @@ clauses = [
 - An is_satisfied(bitstr: str) -> bool function checks whether a 3-bit string satisfies all clauses.
 - Exhaustive search over 000–111 builds all_sols, the list of satisfying bitstrings. These are the states that the Grover oracle should mark with a phase flip.
 
-##### 1.2 Grover oracle and diffusion
+#### 1.2 Grover oracle and diffusion
 - apply_oracle(qc, solutions):
   - For each solution bitstring sol:
     1. Apply X to positions where sol has 0, so that the solver state becomes |111…1⟩.
@@ -59,14 +59,14 @@ clauses = [
   - Repeats [oracle → diffusion] for the given number of iterations
   - Measures all qubits at the end
     
-##### 1.3 Running on ibm_aachen
+#### 1.3 Running on ibm_aachen
 run_on_aachen(qc, shots):
 - Creates QiskitRuntimeService(), selects backend = service.backend("ibm_aachen")
 - Uses generate_preset_pass_manager(optimization_level=3, backend=backend) for transpilation
 - Samples with a Sampler(mode=backend) primitive for the given shots
 - Returns a dictionary of counts: {"bitstring": count, ...}
 
-##### 1.4 Configuration recovery via hill-climbing
+#### 1.4 Configuration recovery via hill-climbing
 Two helpers implement simple hill-climbing over bitstrings:
 - hill_climb_from(start, counts):
   - Treats the counts as a score function on bitstrings.
@@ -87,7 +87,7 @@ This yields a list of recovered candidate solutions from a noisy shot distributi
 A 3×3 origin–destination (OD) demand matrix is embedded as amplitudes on a 2n-qubit register.
 The circuit is sampled once on a QPU, and then a DynamicConfigRecovery class plus adaptive reweighting is used to refine a set of “valid” OD pairs using purely classical resampling.
 
-##### 2.1 DynamicConfigRecovery
+#### 2.1 DynamicConfigRecovery
 ```
 class DynamicConfigRecovery:
     def __init__(self, n, prob_threshold, max_distance):
@@ -109,7 +109,7 @@ def repair_and_update(self, raw_counts):
 
 - Step 2 implements a simple “repair” step: invalid OD pairs are mapped to their closest currently-valid pair if they are within a bounded manhattan distance.
 
-##### 2.2 Amplitude embedding for OD distribution
+#### 2.2 Amplitude embedding for OD distribution
 ```
 def build_od_embedding_circuit(n, distribution):
     qr = QuantumRegister(2*n, 'q')
@@ -130,7 +130,7 @@ def build_od_embedding_circuit(n, distribution):
 - distribution is a classical probability distribution over (i, j).
 - The circuit prepares a pure state whose amplitude squared gives this distribution.
   
-##### 2.3 QPU and local sampling
+#### 2.3 QPU and local sampling
 - sample_qpu_once(qc, backend, shots):
   - Transpiles the circuit for the backend with optimization level 3.
   - Uses a Session(backend) and Sampler for shots samples.
@@ -139,7 +139,7 @@ def build_od_embedding_circuit(n, distribution):
   - Draws shots samples from a classical multinomial with probabilities given by distribution.
   - Converts each sampled (i, j) pair into a bitstring of length 2n (i bits then j bits).
 
-##### 2.4 Main loop: QPU once + adaptive refinement
+#### 2.4 Main loop: QPU once + adaptive refinement
 In main():
   1. Define a 3×3 OD demand:
 ```
@@ -173,7 +173,7 @@ Takeaway: This notebook shows a “QPU once + classical iterative refinement” 
 A 3-qubit bit-flip repetition code is used to encode a logical state.
 Noisy samples from ibm_aachen are then projected onto the code subspace by mapping each observed bitstring to the nearest codeword in Hamming distance (000 or 111).
 
-##### 3.1 BitFlipConfigRecovery
+#### 3.1 BitFlipConfigRecovery
 ```
 class BitFlipConfigRecovery:
     def __init__(self, valid_codewords):
@@ -200,7 +200,7 @@ class BitFlipConfigRecovery:
 - self.freq keeps track of the full raw distribution over all observed bitstrings.
 - recovered records the distribution after projection onto the code space.
 
-##### 3.2 3-qubit bit-flip code circuit
+#### 3.2 3-qubit bit-flip code circuit
 ```
 def encode_bit_flip_code():
     qr = QuantumRegister(3, 'q')
@@ -219,7 +219,7 @@ def encode_bit_flip_code():
 - The logical information is effectively mirrored on three physical qubits (|0⟩ becomes |000⟩, |1⟩ becomes |111⟩ in the Z basis).
 - The code in this notebook prepares a superposition via H on the first qubit and encodes it into the repetition code.
  
-##### 3.3 Running and recovery
+#### 3.3 Running and recovery
 In main():
   1. Build the encoding circuit qc = encode_bit_flip_code().
   2. Transpile and run it on ibm_aachen using QiskitRuntimeService, Session, and Sampler for, e.g., 2048 shots.
@@ -237,7 +237,7 @@ Takeaway: This notebook demonstrates projection of noisy measurement outcomes on
 A minimal U(1) lattice gauge toy model is built on four “link” qubits forming a 2×2 plaquette.
 A 4-body plaquette interaction is implemented via a sequence of gates.
 Noisy measurement outcomes (with additional artificial measurement noise) are then projected onto the gauge-invariant subspace defined by even-parity bitstrings.
-##### 4.1 GaugeConfigRecovery
+#### 4.1 GaugeConfigRecovery
 ```
 class GaugeConfigRecovery:
     def __init__(self, valid_configs):
@@ -263,7 +263,7 @@ class GaugeConfigRecovery:
 ```
 - This is structurally similar to the bit-flip code recovery, but now the set of valid configurations is “all 4-bit strings with even parity”.
  
-##### 4.2 U(1) 2×2 plaquette circuit
+#### 4.2 U(1) 2×2 plaquette circuit
 ```
 def build_u1_plaquette():
     qr = QuantumRegister(4, 'link')
@@ -292,7 +292,7 @@ def build_u1_plaquette():
 ```
 - The 4-body phase is implemented via standard tricks (Hadamards plus a chain of CNOTs and a single-qubit RZ).
 
-##### 4.3 Measurement noise
+#### 4.3 Measurement noise
 ```
 def add_measurement_noise(raw_counts, flip_prob=0.1):
     noisy = Counter()
@@ -308,7 +308,7 @@ def add_measurement_noise(raw_counts, flip_prob=0.1):
 ```
 - Each bit of each shot is independently flipped with probability flip_prob, simulating classical measurement noise.
   
-##### 4.4 Gauge-invariant configurations
+#### 4.4 Gauge-invariant configurations
 ```
 def generate_valid_configs():
     valid = []
@@ -320,7 +320,7 @@ def generate_valid_configs():
 ```
 - The gauge-invariant subspace is chosen as “4-bit states with even parity” (a minimal toy implementation of a Gauss-law constraint).
   
-##### 4.5 Main flow
+#### 4.5 Main flow
 1. Build and run the plaquette circuit on ibm_aachen to obtain raw_counts.
 2. Add artificial measurement noise via add_measurement_noise.
 3. Generate the set of even-parity configurations and construct GaugeConfigRecovery(valid).
