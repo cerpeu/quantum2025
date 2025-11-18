@@ -53,7 +53,7 @@ clauses = [
   - Prepares an equal superposition on n qubits via H⊗n
   - Repeats [oracle → diffusion] for the given number of iterations
   - Measures all qubits at the end
-  - 
+    
 ##### 1.3 Running on ibm_aachen
 run_on_aachen(qc, shots):
 - Creates QiskitRuntimeService(), selects backend = service.backend("ibm_aachen")
